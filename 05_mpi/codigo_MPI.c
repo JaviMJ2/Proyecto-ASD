@@ -24,13 +24,13 @@ int main(int argc, char *argv[]) {
     int local_rows = N / size;
 
     // Matrices en estilo del código base
-    static double A[512][512];
-    static double B[512][512];
-    static double C[512][512];
+    static double A[N][N];
+    static double B[N][N];
+    static double C[N][N];
 
-    // buffers locales (también 2D)
-    double A_loc[512][512];
-    double C_loc[512][512];
+    // buffers locales
+    double A_loc[N][N];
+    double C_loc[N][N];
 
     // Inicializar
     if (rank == 0) {
