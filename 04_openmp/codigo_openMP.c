@@ -7,7 +7,7 @@
 #define N 512
 
 /* ── Inicialización ── */
-void init(double A[N][N], double B[N][N]) {
+void init(double A[N][N], double B[N][N], double C[N][N]) {
     srand(42);
 
     for (int i = 0; i < N; i++)
@@ -31,61 +31,62 @@ void matmul_base(double A[N][N], double B[N][N], double C[N][N]) {
 /* ── Versión OpenMP static
  * Divide las filas del bucle i entre los hilos disponibles.
  * static: cada hilo recibe el mismo número de filas antes de empezar.
- * Es el mejor scheduler para GEMM porque la carga es uniforme. 
- * Sin race condition: cada hilo escribe en filas distintas de C. 
+ * Es el mejor scheduler para GEMM porque la carga es uniforme.
+ * Sin race condition: cada hilo escribe en filas distintas de C.
 */
 void matmul_static(double A[N][N], double B[N][N], double C[N][N]) {
-
     memset(C, 0, sizeof(double) * N * N);
+    int i, j, k;
 
-    #pragma omp parallel for schedule(static)
-    for (int i = 0; i < N; i++)
-        for (int j = 0; j < N; j++)
-            for (int k = 0; k < N; k++)
+    #pragma omp parallel for schedule(static) private(j, k) shared(A, B, C)
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            for (k = 0; k < N; k++)
                 C[i][j] += A[i][k] * B[k][j];
 }
 
 /* ── Versión OpenMP dynamic
  * Cada hilo pide trabajo al terminar el anterior.
  * Peor para GEMM porque añade overhead de sincronización
- * sin necesidad (la carga ya es uniforme). 
+ * sin necesidad (la carga ya es uniforme).
 */
 void matmul_dynamic(double A[N][N], double B[N][N], double C[N][N]) {
-
     memset(C, 0, sizeof(double) * N * N);
+    int i, j, k;
 
-    #pragma omp parallel for schedule(dynamic,1)
-    for (int i = 0; i < N; i++)
-        for (int j = 0; j < N; j++)
-            for (int k = 0; k < N; k++)
+    #pragma omp parallel for schedule(dynamic,1) private(j, k) shared(A, B, C)
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            for (k = 0; k < N; k++)
                 C[i][j] += A[i][k] * B[k][j];
 }
 
 /* ── Versión OpenMP guided
  * Bloques decrecientes: empieza con bloques grandes y los reduce.
- * Compromiso entre static y dynamic. 
+ * Compromiso entre static y dynamic.
 */
 void matmul_guided(double A[N][N], double B[N][N], double C[N][N]) {
-
     memset(C, 0, sizeof(double) * N * N);
+    int i, j, k;
 
-    #pragma omp parallel for schedule(guided)
-    for (int i = 0; i < N; i++)
-        for (int j = 0; j < N; j++)
-            for (int k = 0; k < N; k++)
+    #pragma omp parallel for schedule(guided) private(j, k) shared(A, B, C)
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            for (k = 0; k < N; k++)
                 C[i][j] += A[i][k] * B[k][j];
 }
 
 /* ── checksum ── */
 double checksum(double C[N][N]) {
     double s = 0.0;
-    for (int i = 0; i < N; i++) for (int j = 0; j < N; j++) s += C[i][j];
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            s += C[i][j];
     return s;
 }
 
 /* ── MAIN ── */
-int main() {
-    int N = argc > 1 ? atoi(argv[1]) : 512;
+int main(int argc, char *argv[]) {
     static double A[N][N], B[N][N], C[N][N];
 
     init(A, B, C);
@@ -112,10 +113,7 @@ int main() {
     printf("%-6s %-10s %-10s %-10s %-10s\n", "hilos", "t(s)", "GFLOPS", "speedup", "efic(%)");
 
     for (int ci = 0; ci < 4; ci++) {
-
         int p = configs[ci];
-        if (p > omp_get_max_threads()) break;
-
         omp_set_num_threads(p);
 
         double best = 1e9;
@@ -140,7 +138,6 @@ int main() {
     double ts = 1e9, td = 1e9, tg = 1e9;
 
     for (int r = 0; r < REPS; r++) {
-
         double t0, t1;
 
         t0 = omp_get_wtime();
@@ -159,10 +156,18 @@ int main() {
         if (t1 - t0 < tg) tg = t1 - t0;
     }
 
-    printf("\nSchedulers:\n");
+    printf("\nSchedulers (con %d hilos):\n", omp_get_max_threads());
     printf("static : %.6f s\n", ts);
     printf("dynamic: %.6f s\n", td);
     printf("guided : %.6f s\n", tg);
 
+    printf("\nChecksum = %.6f\n", checksum(C));
+
     return 0;
 }
+
+/*
+COMPILACION:
+    gcc -fopenmp matmul_omp.c -o matmul_omp
+    ./matmul_omp
+*/

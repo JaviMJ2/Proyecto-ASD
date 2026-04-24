@@ -7,19 +7,20 @@
 #define N 512         // Tamaño de la matriz
 
 // Inicializa las matrices A y B con valores aleatorios
-void init(double A[N][N], double B[N][N]) {
+void init(double A[N][N], double B[N][N], double C[N][N]) {
     srand(42);  // Semilla fija para reproducibilidad
 
     for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++) {
             A[i][j] = (double)rand() / RAND_MAX;  // Valor aleatorio [0,1]
             B[i][j] = (double)rand() / RAND_MAX;  // Valor aleatorio [0,1]
-            C[i][j] = 0.0;
         }
 }
 
 // Multiplicación de matrices
 void matmul(double A[N][N], double B[N][N], double C[N][N]) {
+    memset(C, 0, sizeof(double) * N * N);
+
     // Recorre filas de A
     for (int i = 0; i < N; i++)
         // Recorre columnas de B
@@ -40,7 +41,7 @@ int main() {
     // Matrices estáticas para evitar desbordamiento de pila
     static double A[N][N], B[N][N], C[N][N];
 
-    init(A, B);  // Inicializa matrices A y B
+    init(A, B, C);  // Inicializa matrices A, B y C
 
     double best = 1e9;  // Tiempo mínimo observado
 
