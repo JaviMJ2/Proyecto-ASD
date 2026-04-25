@@ -1,30 +1,26 @@
-#include <stdio.h>    // Entrada/salida (printf)
-#include <stdlib.h>   // rand
-#include <string.h>   // memset
-#include <omp.h>      // omp_get_wtime (temporizador)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <omp.h>
 
-#define REPS 3        // Número de repeticiones para medir tiempo
-#define N 512         // Tamaño de la matriz
+#define REPS 3
+#define N 512
 
-// Inicializa las matrices A y B con valores aleatorios
-void init(double A[N][N], double B[N][N]) {
-    srand(42);  // Semilla fija para reproducibilidad
+void init(double A[N][N], double B[N][N], double C[N][N]) {
+    srand(42);
     
+    memset(C, 0, sizeof(double) * N * N);
+
     for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++) {
-            A[i][j] = (double)rand() / RAND_MAX;  // Valor aleatorio [0,1]
-            B[i][j] = (double)rand() / RAND_MAX;  // Valor aleatorio [0,1]
-            C[i][j] = 0.0;
+            A[i][j] = (double)rand() / RAND_MAX;
+            B[i][j] = (double)rand() / RAND_MAX;
         }
 }
 
-/* ── Versión base: triple bucle naive ── */
 void matmul(double A[N][N], double B[N][N], double C[N][N]) {
-    // Recorre filas de A
     for (int i = 0; i < N; i++)
-        // Recorre columnas de B
         for (int j = 0; j < N; j++)
-            // Producto escalar fila-columna
             for (int k = 0; k < N; k++)
                 C[i][j] += A[i][k] * B[k][j];
 }
@@ -60,16 +56,13 @@ void matmul_unroll4(double A[N][N], double B[N][N], double C[N][N]) {
     }
 }
 
-/* ── Checksum ── */
 double checksum(double C[N][N]) {
     double s = 0.0;
     for (int i = 0; i < N; i++) for (int j = 0; j < N; j++) s += C[i][j];
     return s;
 }
 
-/* ── MAIN ── */
 int main() {
-
     static double A[N][N], B[N][N], C[N][N];
 
     init(A, B, C);
